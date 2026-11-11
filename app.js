@@ -33,13 +33,10 @@
   const editorPage = $('.editor-page');
   const notesPage = $('#notes-page');
   const settingsPage = $('#settings-page');
-  const pageView = $('#page-view');
   const editor = $('#note-editor');
   const titleInput = $('#note-title');
   const tagsInput = $('#note-tags');
   const placeholder = $('#editor-placeholder');
-  const saveState = $('#save-state');
-  const sidebarCount = $('#sidebar-note-count');
   const toastElement = $('#toast');
 
   let notes = readStorage(NOTES_KEY, []);
@@ -54,7 +51,6 @@
   let pendingConfirmAction = null;
   let recordingShortcut = null;
   let toastTimer = null;
-  let savePulseTimer = null;
 
   function readStorage(key, fallback) {
     try {
@@ -124,7 +120,6 @@
   function persistNotes() {
     notes.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     writeStorage(NOTES_KEY, notes);
-    sidebarCount.textContent = String(notes.length);
   }
 
   function persistSettings() {
@@ -169,15 +164,6 @@
     return output.innerHTML;
   }
 
-  function updateSaveIndicator(saved = true) {
-    saveState.classList.toggle('is-saving', !saved);
-    saveState.innerHTML = saved
-      ? '<span class="save-state-dot"></span>all changes saved'
-      : '<span class="save-state-dot"></span>saving…';
-    const autosave = $('#autosave-label');
-    if (autosave) autosave.textContent = saved ? 'local · private' : 'saving locally';
-  }
-
   function saveCurrentNote(showSaved = false) {
     const note = getActiveNote();
     if (!note || currentRoute !== 'new') return;
@@ -190,12 +176,9 @@
     note.content = nextContent;
     note.tags = nextTags;
     note.updatedAt = Date.now();
-    updateSaveIndicator(false);
     persistNotes();
     renderWordCount();
-    if (savePulseTimer) clearTimeout(savePulseTimer);
-    savePulseTimer = setTimeout(() => updateSaveIndicator(true), 280);
-    if (showSaved) showToast('saved on this device');
+    if (showSaved) showToast('saved');
   }
 
   function navigateTo(route, noteId = null, replace = false, skipSave = false) {
@@ -245,8 +228,6 @@
       renderSettings();
     }
     updateNavigation();
-    updateBreadcrumbs();
-    sidebarCount.textContent = String(notes.length);
   }
 
   function renderEditor() {
@@ -256,10 +237,7 @@
     tagsInput.value = (note.tags || []).join(', ');
     editor.innerHTML = sanitizeHtml(note.content || '');
     placeholder.classList.toggle('hidden', editor.textContent.trim().length > 0);
-    $('#editor-meta-label').textContent = note.title.trim() || 'untitled note';
-    $('#editor-date').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).toLowerCase();
     renderWordCount();
-    updateSaveIndicator(true);
     const url = routeUrl('new', note.id);
     if (location.pathname + location.search !== url) history.replaceState({ route: 'new', noteId: note.id }, '', url);
   }
@@ -273,10 +251,6 @@
     });
   }
 
-  function updateBreadcrumbs() {
-    const label = currentRoute === 'new' ? 'new note' : currentRoute === 'notes' ? 'all notes' : 'settings';
-    $('#breadcrumbs').innerHTML = `<span>workspace</span><span class="crumb-separator">/</span><strong>${label}</strong>`;
-  }
 
   function plainText(html) {
     const container = document.createElement('div');
@@ -294,14 +268,6 @@
     return [...tags].slice(0, 5);
   }
 
-  function formatDate(timestamp) {
-    if (!timestamp) return 'just now';
-    const date = new Date(timestamp);
-    const now = new Date();
-    const sameDay = date.toDateString() === now.toDateString();
-    if (sameDay) return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  }
 
   function renderNotes() {
     const grid = $('#notes-grid');
@@ -311,7 +277,7 @@
       return text.includes(query);
     }).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     grid.replaceChildren();
-    $('#notes-summary').textContent = `${results.length} ${results.length === 1 ? 'note' : 'notes'}${query ? ' found' : ' in your collection'}`;
+    $('#notes-summary').textContent = `${results.length} ${results.length === 1 ? 'note' : 'notes'}`;
     $('#empty-notes').classList.toggle('hidden', results.length > 0);
     grid.classList.toggle('hidden', results.length === 0);
 
@@ -323,27 +289,22 @@
       card.setAttribute('aria-label', `Open ${note.title || 'Untitled note'}`);
       const top = document.createElement('div');
       top.className = 'note-card-top';
-      const mark = document.createElement('span');
-      mark.className = 'note-card-mark';
-      const date = document.createElement('span');
-      date.className = 'note-card-date';
-      date.textContent = formatDate(note.updatedAt);
       const remove = document.createElement('button');
       remove.className = 'note-card-delete';
       remove.type = 'button';
       remove.title = 'Delete note';
       remove.setAttribute('aria-label', 'Delete note');
-      remove.textContent = '×';
+      remove.textContent = 'delete';
       remove.addEventListener('click', event => {
         event.stopPropagation();
         confirmDeleteNote(note.id);
       });
-      top.append(mark, date, remove);
+      top.append(remove);
       const heading = document.createElement('h3');
       heading.textContent = note.title.trim() || 'Untitled note';
       const preview = document.createElement('p');
       preview.className = 'note-card-preview';
-      preview.textContent = plainText(note.content) || 'An empty page, ready for something.';
+      preview.textContent = plainText(note.content);
       const chips = document.createElement('div');
       chips.className = 'note-card-tags';
       noteTags(note).forEach(tag => {
@@ -455,7 +416,7 @@
       }
       closeConfirm();
       renderApp();
-      showToast('workspace cleared');
+      showToast('all notes deleted');
     });
   }
 
@@ -492,7 +453,7 @@
       if (event.key === 'Escape') {
         event.preventDefault();
         recordingShortcut = null;
-        $('#shortcut-edit-status').textContent = 'shortcuts are saved locally';
+        $('#shortcut-edit-status').textContent = ''; 
         renderSettings();
         return;
       }
@@ -568,7 +529,6 @@
   });
 
   titleInput.addEventListener('input', () => {
-    $('#editor-meta-label').textContent = titleInput.value.trim() || 'untitled note';
     saveCurrentNote();
   });
   tagsInput.addEventListener('input', saveCurrentNote);
@@ -582,7 +542,6 @@
     document.execCommand('insertText', false, text);
   });
 
-  $('#new-note-top').addEventListener('click', () => createNote(true));
   $('#notes-create-button').addEventListener('click', () => createNote(true));
   $('#empty-create-button').addEventListener('click', () => createNote(true));
   $('#notes-search').addEventListener('input', renderNotes);
@@ -610,7 +569,6 @@
   $('#confirm-modal').addEventListener('click', event => {
     if (event.target === $('#confirm-modal')) closeConfirm();
   });
-  $('#mobile-menu-button').addEventListener('click', () => $('#mobile-nav').classList.toggle('mobile-nav-open'));
 
   // A route may have been opened directly, or restored by the GitHub Pages fallback.
   const initialId = new URLSearchParams(location.search).get('id');

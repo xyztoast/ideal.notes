@@ -3,25 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <base href="./">
-  <meta name="theme-color" content="#101923">
-  <meta name="description" content="A quiet place for your notes.">
+  <meta name="theme-color" content="#181818">
+  <meta name="description" content="A simple notepad for your ideas.">
   <title>Noted</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script>
-    // GitHub Pages serves this one-page app from the repository root.
-    // Restore a deep link after the lightweight 404.html fallback redirects here.
     (() => {
-      const params = new URLSearchParams(location.search);
-      const restored = params.get('route');
-      if (!restored) return;
-      const known = /^\/(new|notes|settings)\/?$/.test(restored) ? restored.replace(/\/$/, '') : '/new';
-      const clean = location.pathname.replace(/\/$/, '');
-      const base = clean && !clean.endsWith('/index.html') ? clean : (clean.endsWith('/index.html') ? clean.slice(0, -11) : '');
-      history.replaceState({}, '', `${base}${known}` || '/new');
+      const route = new URLSearchParams(location.search).get('route');
+      if (!route) return;
+      const safeRoute = /^\/(new|notes|settings)\/?$/.test(route) ? route.replace(/\/$/, '') : '/new';
+      history.replaceState({}, '', `${location.pathname.replace(/\/$/, '')}${safeRoute}`);
     })();
   </script>
   <script src="wallpaper.js" defer></script>
@@ -34,71 +28,31 @@
 
   <div class="app-frame" id="app">
     <aside class="sidebar glass-panel" aria-label="Main navigation">
-      <a class="brand" href="new" data-route="new" aria-label="Noted home">
-        <span class="brand-mark"><span></span><span></span><span></span></span>
-        <span class="brand-word">noted<span class="brand-period">.</span></span>
-      </a>
-
-      <div class="nav-label">workspace</div>
       <nav class="main-nav">
-        <a class="nav-link active" href="new" data-route="new">
-          <img src="pencil.svg" alt="" class="nav-icon">
+        <a class="nav-link active" href="/new" data-route="new" title="New note" aria-label="New note">
+          <img src="/pencil.svg" alt="" class="nav-icon">
           <span>new note</span>
-          <kbd class="nav-hint">Ctrl N</kbd>
         </a>
-        <a class="nav-link" href="notes" data-route="notes">
-          <img src="notes.svg" alt="" class="nav-icon">
-          <span>all notes</span>
-          <span class="nav-count" id="sidebar-note-count">0</span>
+        <a class="nav-link" href="/notes" data-route="notes" title="Notes" aria-label="Notes">
+          <img src="/notes.svg" alt="" class="nav-icon">
+          <span>notes</span>
         </a>
-        <a class="nav-link" href="settings" data-route="settings">
-          <img src="settings.svg" alt="" class="nav-icon">
+        <a class="nav-link" href="/settings" data-route="settings" title="Settings" aria-label="Settings">
+          <img src="/settings.svg" alt="" class="nav-icon">
           <span>settings</span>
         </a>
       </nav>
-
-      <div class="sidebar-bottom">
-        <div class="storage-indicator"><span class="storage-dot"></span><span>saved on this device</span></div>
-        <div class="sidebar-caption">your thoughts, in one place.</div>
-      </div>
     </aside>
 
     <main class="main-area">
-      <header class="topbar">
-        <div class="breadcrumbs" id="breadcrumbs"><span>workspace</span><span class="crumb-separator">/</span><strong>new note</strong></div>
-        <div class="topbar-actions">
-          <span class="save-state" id="save-state"><span class="save-state-dot"></span>all changes saved</span>
-          <button class="icon-button mobile-menu-button" id="mobile-menu-button" type="button" aria-label="Open navigation">
-            <span class="menu-lines"><i></i><i></i></span>
-          </button>
-          <div class="profile-orb" aria-label="Local workspace">n</div>
-        </div>
-      </header>
-
       <section class="page-view" id="page-view" aria-live="polite">
         <section class="editor-page">
-          <div class="editor-heading-row">
-            <div>
-              <div class="eyebrow" id="editor-date">your space</div>
-              <h1 class="page-title">A little room to think.</h1>
-            </div>
-            <button class="subtle-action" id="new-note-top" type="button"><span class="plus-mark">+</span> new note</button>
-          </div>
-
           <article class="editor-card glass-panel">
-            <div class="editor-meta-row">
-              <span class="document-mark"><span></span></span>
-              <span class="editor-meta-label" id="editor-meta-label">untitled note</span>
-              <span class="meta-spacer"></span>
-              <span class="autosave-label" id="autosave-label">local · private</span>
-            </div>
-
-            <input class="note-title-input" id="note-title" type="text" maxlength="120" placeholder="Untitled note" aria-label="Note title" autocomplete="off">
+            <input class="note-title-input" id="note-title" type="text" maxlength="120" placeholder="Untitled" aria-label="Note title" autocomplete="off">
 
             <div class="tag-entry-row">
               <span class="tag-symbol">#</span>
-              <input class="tag-input" id="note-tags" type="text" placeholder="add tags, separated by commas" aria-label="Note tags" autocomplete="off">
-              <span class="tag-hint">optional</span>
+              <input class="tag-input" id="note-tags" type="text" placeholder="Add tags" aria-label="Note tags" autocomplete="off">
             </div>
 
             <div class="editor-divider"></div>
@@ -126,67 +80,54 @@
             </div>
 
             <div class="editor-content-wrap">
-              <div class="editor-placeholder" id="editor-placeholder">Start with a thought...</div>
+              <div class="editor-placeholder" id="editor-placeholder">Start writing...</div>
               <div class="note-editor" id="note-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Note content" spellcheck="true"></div>
             </div>
 
             <div class="editor-footer">
               <span id="word-count">0 words</span>
-              <span class="footer-center">ctrl + enter to keep writing</span>
               <button class="editor-delete-button" id="delete-note-button" type="button">delete note</button>
             </div>
           </article>
-          <div class="editor-bottom-note"><span class="tiny-lock">⌑</span> only stored in this browser. nothing leaves your device.</div>
         </section>
 
         <section class="notes-page hidden" id="notes-page">
           <div class="page-heading-row">
-            <div><div class="eyebrow">your collection</div><h1 class="page-title">All notes<span class="title-dot">.</span></h1><p class="page-description">A running collection of everything you’ve saved.</p></div>
-            <button class="primary-button" id="notes-create-button" type="button"><span>+</span> new note</button>
+            <h1 class="page-title">Notes</h1>
+            <button class="primary-button" id="notes-create-button" type="button">+ new note</button>
           </div>
           <div class="notes-controls glass-panel">
-            <div class="search-field"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg><input id="notes-search" type="search" placeholder="Search your notes" aria-label="Search notes"><kbd>Ctrl F</kbd></div>
-            <div class="notes-sort-label" id="notes-sort-label">most recent <span>↓</span></div>
+            <div class="search-field"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg><input id="notes-search" type="search" placeholder="Search notes" aria-label="Search notes"><kbd>Ctrl F</kbd></div>
           </div>
           <div class="notes-summary" id="notes-summary"></div>
           <div class="notes-grid" id="notes-grid"></div>
-          <div class="empty-notes hidden" id="empty-notes"><div class="empty-orbit"><span></span></div><h2>Nothing here yet.</h2><p>Your next good idea has to start somewhere.</p><button class="text-action" id="empty-create-button" type="button">write your first note <span>↗</span></button></div>
+          <div class="empty-notes hidden" id="empty-notes"><h2>No notes yet</h2><button class="text-action" id="empty-create-button" type="button">Create a note</button></div>
         </section>
 
         <section class="settings-page hidden" id="settings-page">
-          <div class="page-heading-row settings-heading">
-            <div><div class="eyebrow">make it yours</div><h1 class="page-title">Settings<span class="title-dot">.</span></h1><p class="page-description">A few small things to make this space feel right.</p></div>
-          </div>
+          <div class="page-heading-row settings-heading"><h1 class="page-title">Settings</h1></div>
           <div class="settings-layout">
             <section class="settings-card glass-panel">
-              <div class="settings-card-heading"><div><div class="settings-kicker">writing</div><h2>Note preferences</h2></div><span class="settings-index">01</span></div>
-              <div class="setting-row"><div class="setting-copy"><strong>Use Markdown for tags</strong><span>Pick up #hashtags in your notes and show them as tags.</span></div><label class="switch"><input type="checkbox" id="markdown-tags-setting"><span class="switch-track"></span></label></div>
+              <div class="settings-card-heading"><h2>Note preferences</h2></div>
+              <div class="setting-row"><div class="setting-copy"><strong>Use Markdown for tags</strong><span>Find hashtags in your notes and use them as tags.</span></div><label class="switch"><input type="checkbox" id="markdown-tags-setting"><span class="switch-track"></span></label></div>
             </section>
             <section class="settings-card glass-panel">
-              <div class="settings-card-heading"><div><div class="settings-kicker">shortcuts</div><h2>Keyboard shortcuts</h2></div><span class="settings-index">02</span></div>
-              <p class="settings-card-description">Use the defaults or record a combination that feels natural.</p>
+              <div class="settings-card-heading"><h2>Keyboard shortcuts</h2></div>
               <div class="shortcut-list" id="shortcut-list"></div>
-              <div class="shortcut-footer"><span id="shortcut-edit-status">shortcuts are saved locally</span><button class="text-action" id="reset-shortcuts" type="button">reset defaults</button></div>
+              <div class="shortcut-footer"><span id="shortcut-edit-status" aria-live="polite"></span><button class="text-action" id="reset-shortcuts" type="button">reset defaults</button></div>
             </section>
             <section class="settings-card danger-card glass-panel">
-              <div class="settings-card-heading"><div><div class="settings-kicker">danger zone</div><h2>Clear your workspace</h2></div><span class="settings-index">03</span></div>
-              <div class="setting-row"><div class="setting-copy"><strong>Delete all notepads</strong><span>Permanently remove every note saved in this browser.</span></div><button class="danger-button" id="delete-all-button" type="button">delete all notes</button></div>
+              <div class="settings-card-heading"><h2>Delete all notepads</h2></div>
+              <div class="setting-row"><div class="setting-copy"><strong>Delete all notes</strong><span>This cannot be undone.</span></div><button class="danger-button" id="delete-all-button" type="button">delete all</button></div>
             </section>
-            <div class="settings-footnote"><span class="tiny-lock">⌑</span> settings and notes are stored locally in this browser.</div>
           </div>
         </section>
       </section>
     </main>
   </div>
 
-  <div class="mobile-nav glass-panel" id="mobile-nav" aria-label="Mobile navigation">
-    <a class="mobile-nav-link active" href="new" data-route="new"><img src="pencil.svg" alt=""><span>new</span></a>
-    <a class="mobile-nav-link" href="notes" data-route="notes"><img src="notes.svg" alt=""><span>notes</span></a>
-    <a class="mobile-nav-link" href="settings" data-route="settings"><img src="settings.svg" alt=""><span>settings</span></a>
-  </div>
-
   <div class="modal-backdrop hidden" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
-    <div class="confirm-card glass-panel"><div class="confirm-symbol">!</div><div class="eyebrow">just checking</div><h2 id="confirm-title">Delete this note?</h2><p id="confirm-message">This note will be removed from this browser.</p><div class="confirm-actions"><button class="secondary-button" id="cancel-confirm" type="button">keep it</button><button class="danger-button" id="accept-confirm" type="button">delete</button></div></div>
+    <div class="confirm-card glass-panel"><h2 id="confirm-title">Delete this note?</h2><p id="confirm-message">This action cannot be undone.</p><div class="confirm-actions"><button class="secondary-button" id="cancel-confirm" type="button">cancel</button><button class="danger-button" id="accept-confirm" type="button">delete</button></div></div>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body>
