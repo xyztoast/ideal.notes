@@ -35,9 +35,9 @@
       p += u_pointer * 0.025;
       float t = u_time * 0.075;
 
-      vec3 color = vec3(0.018, 0.035, 0.068);
+      vec3 color = vec3(0.075, 0.12, 0.19);
       float atmosphere = smoothstep(-0.48, 0.62, p.y + 0.11 * sin(p.x * 2.0 + t));
-      color += vec3(0.012, 0.035, 0.072) * atmosphere;
+      color += vec3(0.045, 0.085, 0.135) * atmosphere;
 
       vec2 c1 = vec2(0.36 * sin(t * 0.72), 0.22 * cos(t * 0.61) + 0.13);
       vec2 c2 = vec2(-0.42 * cos(t * 0.58), -0.18 * sin(t * 0.76) - 0.06);
@@ -48,26 +48,26 @@
       float b2 = glowBlob(p, c2, vec2(0.54, 0.39), -0.52 + 0.12 * cos(t * 0.8));
       float b3 = glowBlob(p, c3, vec2(0.38, 0.54), 0.82);
       float b4 = glowBlob(p, c4, vec2(0.72, 0.21), -0.24);
-      color += vec3(0.025, 0.105, 0.245) * b1;
-      color += vec3(0.025, 0.16, 0.31) * b2;
-      color += vec3(0.065, 0.19, 0.36) * b3;
-      color += vec3(0.055, 0.12, 0.27) * b4;
+      color += vec3(0.085, 0.19, 0.31) * b1;
+      color += vec3(0.09, 0.22, 0.35) * b2;
+      color += vec3(0.13, 0.25, 0.38) * b3;
+      color += vec3(0.10, 0.19, 0.31) * b4;
 
       float waveA = 0.17 * sin(p.x * 2.15 + t * 1.2) + 0.055 * sin(p.x * 4.1 - t * 0.8);
       float waveB = -0.20 + 0.11 * sin(p.x * 1.72 - t * 0.9 + 1.3);
       float ribbonA = exp(-pow((p.y - waveA) * 5.2, 2.0));
       float ribbonB = exp(-pow((p.y - waveB) * 4.0, 2.0));
       float edgeLight = exp(-pow((p.y - (waveA + 0.12)) * 14.0, 2.0));
-      color += vec3(0.045, 0.14, 0.27) * ribbonA * 0.32;
-      color += vec3(0.035, 0.11, 0.23) * ribbonB * 0.25;
-      color += vec3(0.11, 0.23, 0.35) * edgeLight * 0.12;
+      color += vec3(0.10, 0.20, 0.31) * ribbonA * 0.32;
+      color += vec3(0.08, 0.16, 0.27) * ribbonB * 0.25;
+      color += vec3(0.16, 0.28, 0.40) * edgeLight * 0.12;
 
       float upperGlow = glowBlob(p, vec2(-0.23, 0.58), vec2(0.92, 0.16), -0.13);
       float lowerGlow = glowBlob(p, vec2(0.18, -0.69), vec2(0.84, 0.18), 0.1);
-      color += vec3(0.06, 0.12, 0.22) * (upperGlow + lowerGlow) * 0.48;
+      color += vec3(0.11, 0.18, 0.27) * (upperGlow + lowerGlow) * 0.48;
 
       float vignette = 1.0 - smoothstep(0.36, 1.08, length(p * vec2(0.86, 0.92)));
-      color *= 0.72 + vignette * 0.28;
+      color *= 0.84 + vignette * 0.16;
       float grain = (hash(gl_FragCoord.xy + floor(u_time * 2.0)) - 0.5) * 0.012;
       color += grain;
       color = pow(max(color, 0.0), vec3(0.92));

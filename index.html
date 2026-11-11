@@ -47,7 +47,7 @@
     <main class="main-area">
       <section class="page-view" id="page-view" aria-live="polite">
         <section class="editor-page">
-          <article class="editor-card glass-panel">
+          <article class="editor-card">
             <input class="note-title-input" id="note-title" type="text" maxlength="120" placeholder="Untitled" aria-label="Note title" autocomplete="off">
 
             <div class="tag-entry-row">
@@ -93,7 +93,7 @@
 
         <section class="notes-page hidden" id="notes-page">
           <div class="page-heading-row">
-            <h1 class="page-title">Notes</h1>
+            <div class="glass-panel title-glass"><h1 class="page-title">Notes</h1></div>
             <button class="primary-button" id="notes-create-button" type="button">+ new note</button>
           </div>
           <div class="notes-controls glass-panel">
@@ -101,11 +101,11 @@
           </div>
           <div class="notes-summary" id="notes-summary"></div>
           <div class="notes-grid" id="notes-grid"></div>
-          <div class="empty-notes hidden" id="empty-notes"><h2>No notes yet</h2><button class="text-action" id="empty-create-button" type="button">Create a note</button></div>
+          <div class="empty-notes hidden" id="empty-notes"><div class="glass-panel empty-title-glass"><h2>No notes yet</h2></div><button class="text-action" id="empty-create-button" type="button">Create a note</button></div>
         </section>
 
         <section class="settings-page hidden" id="settings-page">
-          <div class="page-heading-row settings-heading"><h1 class="page-title">Settings</h1></div>
+          <div class="page-heading-row settings-heading"><div class="glass-panel title-glass"><h1 class="page-title">Settings</h1></div></div>
           <div class="settings-layout">
             <section class="settings-card glass-panel">
               <div class="settings-card-heading"><h2>Note preferences</h2></div>

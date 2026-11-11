@@ -5,7 +5,7 @@
   const SETTINGS_KEY = 'noted.settings.v1';
   const ROUTES = new Set(['new', 'notes', 'settings']);
   const DEFAULT_SHORTCUTS = {
-    newNote: 'Ctrl+N',
+    newNote: 'Ctrl+Alt+N',
     bold: 'Ctrl+B',
     italic: 'Ctrl+I',
     underline: 'Ctrl+U',
@@ -46,6 +46,11 @@
     markdownTags: Boolean(settings && settings.markdownTags),
     shortcuts: { ...DEFAULT_SHORTCUTS, ...(settings && settings.shortcuts ? settings.shortcuts : {}) }
   };
+  // Migrate the previous default away from Chrome's reserved Ctrl+N new-window command.
+  if (String(settings.shortcuts.newNote).toLowerCase() === 'ctrl+n') {
+    settings.shortcuts.newNote = DEFAULT_SHORTCUTS.newNote;
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (_) { /* Settings can still run in memory. */ }
+  }
   let activeNoteId = null;
   let currentRoute = routeFromPath(location.pathname);
   let pendingConfirmAction = null;
@@ -464,6 +469,10 @@
         $('#shortcut-edit-status').textContent = 'use ctrl, alt, or shift with a key';
         return;
       }
+      if (combination.toLowerCase() === 'ctrl+n') {
+        $('#shortcut-edit-status').textContent = 'chrome reserves ctrl+n for a new window; use ctrl+alt+n instead';
+        return;
+      }
       const duplicate = Object.entries(settings.shortcuts).find(([key, value]) => key !== recordingShortcut && value.toLowerCase() === combination.toLowerCase());
       if (duplicate) {
         $('#shortcut-edit-status').textContent = `already used for ${SHORTCUT_NAMES[duplicate[0]].toLowerCase()}`;
@@ -484,12 +493,17 @@
     const action = Object.entries(settings.shortcuts).find(([, value]) => String(value).toLowerCase() === combination)?.[0];
     if (!action) return;
 
-    if (['bold', 'italic', 'underline', 'strikethrough', 'undo', 'redo'].includes(action) && currentRoute !== 'new') return;
-    if (isTypingInput && target !== editor && ['bold', 'italic', 'underline', 'strikethrough', 'undo', 'redo'].includes(action)) return;
-    if (action === 'find' && currentRoute !== 'notes' && isTypingInput) return;
-    if (action === 'save' && currentRoute !== 'new') return;
+    // Browser-reserved shortcuts such as Ctrl+N cannot be intercepted by a webpage.
+    // Use an app-safe default (Ctrl+Alt+N) and prevent browser/editor defaults for app shortcuts.
+    const editorOnly = ['bold', 'italic', 'underline', 'strikethrough', 'undo', 'redo'];
+    const shouldRun = !(editorOnly.includes(action) && currentRoute !== 'new')
+      && !(isTypingInput && target !== editor && editorOnly.includes(action))
+      && !(action === 'save' && currentRoute !== 'new');
+
+    // Once a key combo belongs to the app, do not let the browser run its own action.
     event.preventDefault();
-    handleShortcut(action);
+    event.stopPropagation();
+    if (shouldRun) handleShortcut(action);
   });
 
   // Keep the cursor in the writing area when the user presses Ctrl+Enter.
