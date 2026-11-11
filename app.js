@@ -40,19 +40,26 @@
   const toastElement = $('#toast');
 
   let notes = readStorage(NOTES_KEY, []);
-  let settings = readStorage(SETTINGS_KEY, { markdownTags: false, shortcuts: DEFAULT_SHORTCUTS });
+  const storedSettings = readStorage(SETTINGS_KEY, {});
   if (!Array.isArray(notes)) notes = [];
-  settings = {
-    markdownTags: Boolean(settings && settings.markdownTags),
-    shortcuts: { ...DEFAULT_SHORTCUTS, ...(settings && settings.shortcuts ? settings.shortcuts : {}) }
+  let settings = {
+    markdownTags: Boolean(storedSettings && storedSettings.markdownTags),
+    shortcuts: { ...DEFAULT_SHORTCUTS, ...(storedSettings && storedSettings.shortcuts ? storedSettings.shortcuts : {}) },
+    startupPage: ['new', 'notes', 'settings'].includes(storedSettings && storedSettings.startupPage) ? storedSettings.startupPage : 'new',
+    showSidebarNotes: storedSettings && typeof storedSettings.showSidebarNotes === 'boolean' ? storedSettings.showSidebarNotes : true,
+    backgroundHue: Number.isFinite(Number(storedSettings && storedSettings.backgroundHue)) ? Math.max(-120, Math.min(120, Number(storedSettings.backgroundHue))) : 0,
+    whiteNoteText: storedSettings && typeof storedSettings.whiteNoteText === 'boolean' ? storedSettings.whiteNoteText : true
   };
+  // Older versions stored a blank note as soon as the app opened. Drop those placeholders.
+  notes = notes.filter(note => note && isMeaningfulNote(note));
   // Migrate the previous default away from Chrome's reserved Ctrl+N new-window command.
   if (String(settings.shortcuts.newNote).toLowerCase() === 'ctrl+n') {
     settings.shortcuts.newNote = DEFAULT_SHORTCUTS.newNote;
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (_) { /* Settings can still run in memory. */ }
   }
   let activeNoteId = null;
-  let currentRoute = routeFromPath(location.pathname);
+  let draftNote = null;
+  let currentRoute = routeFromPath(location.pathname) || settings.startupPage;
   let pendingConfirmAction = null;
   let recordingShortcut = null;
   let toastTimer = null;
@@ -91,7 +98,7 @@
 
   function routeFromPath(pathname) {
     const last = pathname.replace(/\/+$/, '').split('/').filter(Boolean).pop();
-    return ROUTES.has(last) ? last : 'new';
+    return ROUTES.has(last) ? last : null;
   }
 
   function routeUrl(route, noteId = null) {
@@ -104,27 +111,24 @@
     return `note-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
   }
 
+  function makeDraftNote() {
+    const now = Date.now();
+    return { id: makeId(), title: '', content: '', tags: [], createdAt: now, updatedAt: now };
+  }
+
   function createNote(navigate = true) {
     if (currentRoute === 'new') saveCurrentNote();
-    const note = {
-      id: makeId(),
-      title: '',
-      content: '',
-      tags: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
-    notes.unshift(note);
-    activeNoteId = note.id;
-    persistNotes();
-    if (navigate) navigateTo('new', note.id, false, true);
+    draftNote = makeDraftNote();
+    activeNoteId = draftNote.id;
+    if (navigate) navigateTo('new', draftNote.id, false, true);
     else renderApp();
-    return note;
+    return draftNote;
   }
 
   function persistNotes() {
     notes.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     writeStorage(NOTES_KEY, notes);
+    renderSidebarNotes();
   }
 
   function persistSettings() {
@@ -132,7 +136,22 @@
   }
 
   function getActiveNote() {
-    return notes.find(note => note.id === activeNoteId) || null;
+    return notes.find(note => note.id === activeNoteId)
+      || (draftNote && draftNote.id === activeNoteId ? draftNote : null);
+  }
+
+  function isMeaningfulNote(note) {
+    return Boolean(
+      String(note.title || '').trim()
+      || plainText(note.content || '').trim()
+      || (Array.isArray(note.tags) && note.tags.some(tag => String(tag).trim()))
+    );
+  }
+
+  function applyAppearanceSettings() {
+    document.documentElement.style.setProperty('--wallpaper-hue-shift', `${settings.backgroundHue}deg`);
+    editorPage.classList.toggle('white-note-text', settings.whiteNoteText);
+    $('#sidebar-notes-section').classList.toggle('hidden', !settings.showSidebarNotes);
   }
 
   function sanitizeHtml(html) {
@@ -181,9 +200,20 @@
     note.content = nextContent;
     note.tags = nextTags;
     note.updatedAt = Date.now();
-    persistNotes();
+
+    if (draftNote && draftNote.id === note.id) {
+      if (isMeaningfulNote(note)) {
+        notes.unshift(note);
+        draftNote = null;
+        persistNotes();
+      }
+    } else {
+      persistNotes();
+    }
+
+    $('#delete-note-button').hidden = !notes.some(item => item.id === note.id);
     renderWordCount();
-    if (showSaved) showToast('saved');
+    if (showSaved && notes.some(item => item.id === note.id)) showToast('saved');
   }
 
   function navigateTo(route, noteId = null, replace = false, skipSave = false) {
@@ -200,39 +230,46 @@
   function setActiveNote(id) {
     const note = notes.find(item => item.id === id);
     if (!note) return;
+    if (currentRoute === 'new') saveCurrentNote();
     activeNoteId = note.id;
-    navigateTo('new', note.id);
+    navigateTo('new', note.id, false, true);
   }
 
   function renderApp() {
+    let activePage;
     if (currentRoute === 'new') {
       if (!getActiveNote()) {
         const existingId = new URLSearchParams(location.search).get('id');
         const match = existingId && notes.find(note => note.id === existingId);
         activeNoteId = match ? match.id : (notes[0] ? notes[0].id : null);
         if (!activeNoteId) {
-          const note = { id: makeId(), title: '', content: '', tags: [], createdAt: Date.now(), updatedAt: Date.now() };
-          notes.unshift(note);
-          activeNoteId = note.id;
-          persistNotes();
+          draftNote = makeDraftNote();
+          activeNoteId = draftNote.id;
         }
       }
       editorPage.classList.remove('hidden');
       notesPage.classList.add('hidden');
       settingsPage.classList.add('hidden');
       renderEditor();
+      activePage = editorPage;
     } else if (currentRoute === 'notes') {
       editorPage.classList.add('hidden');
       notesPage.classList.remove('hidden');
       settingsPage.classList.add('hidden');
       renderNotes();
+      activePage = notesPage;
     } else {
       editorPage.classList.add('hidden');
       notesPage.classList.add('hidden');
       settingsPage.classList.remove('hidden');
       renderSettings();
+      activePage = settingsPage;
     }
     updateNavigation();
+    applyAppearanceSettings();
+    renderSidebarNotes();
+    activePage.classList.remove('page-enter');
+    requestAnimationFrame(() => activePage.classList.add('page-enter'));
   }
 
   function renderEditor() {
@@ -243,6 +280,7 @@
     editor.innerHTML = sanitizeHtml(note.content || '');
     placeholder.classList.toggle('hidden', editor.textContent.trim().length > 0);
     renderWordCount();
+    $('#delete-note-button').hidden = !notes.some(item => item.id === note.id);
     const url = routeUrl('new', note.id);
     if (location.pathname + location.search !== url) history.replaceState({ route: 'new', noteId: note.id }, '', url);
   }
@@ -254,6 +292,24 @@
       if (active) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     });
+  }
+
+  function renderSidebarNotes() {
+    const section = $('#sidebar-notes-section');
+    const list = $('#sidebar-notes-list');
+    if (!section || !list) return;
+    section.classList.toggle('hidden', !settings.showSidebarNotes);
+    list.replaceChildren();
+    for (const note of notes) {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = `sidebar-note-link${activeNoteId === note.id && currentRoute === 'new' ? ' active' : ''}`;
+      item.textContent = note.title.trim() || 'Untitled note';
+      item.title = item.textContent;
+      item.setAttribute('aria-label', `Open ${item.textContent}`);
+      item.addEventListener('click', () => setActiveNote(note.id));
+      list.append(item);
+    }
   }
 
 
@@ -332,6 +388,11 @@
 
   function renderSettings() {
     $('#markdown-tags-setting').checked = settings.markdownTags;
+    $('#startup-page-setting').value = settings.startupPage;
+    $('#background-hue-setting').value = String(settings.backgroundHue);
+    $('#background-hue-value').textContent = `${settings.backgroundHue}°`;
+    $('#white-note-text-setting').checked = settings.whiteNoteText;
+    $('#show-sidebar-notes-setting').checked = settings.showSidebarNotes;
     const list = $('#shortcut-list');
     list.replaceChildren();
     Object.entries(SHORTCUT_NAMES).forEach(([action, label]) => {
@@ -402,6 +463,7 @@
       persistNotes();
       if (wasActive) {
         activeNoteId = notes[0] ? notes[0].id : null;
+        draftNote = null;
         if (currentRoute === 'new' && !activeNoteId) createNote(false);
       }
       closeConfirm();
@@ -414,6 +476,7 @@
     showConfirm('Delete every note?', 'This removes all notepads saved in this browser. This cannot be undone.', () => {
       notes = [];
       activeNoteId = null;
+      draftNote = null;
       persistNotes();
       if (currentRoute === 'new') {
         currentRoute = 'notes';
@@ -525,10 +588,14 @@
 
   window.addEventListener('popstate', () => {
     if (currentRoute === 'new') saveCurrentNote();
-    currentRoute = routeFromPath(location.pathname);
+    currentRoute = routeFromPath(location.pathname) || settings.startupPage;
     if (currentRoute === 'new') {
       const id = new URLSearchParams(location.search).get('id');
       activeNoteId = notes.some(note => note.id === id) ? id : (notes[0]?.id || null);
+      if (!activeNoteId) {
+        draftNote = makeDraftNote();
+        activeNoteId = draftNote.id;
+      }
     }
     renderApp();
   });
@@ -568,6 +635,28 @@
     persistSettings();
     showToast(settings.markdownTags ? 'markdown tags enabled' : 'markdown tags disabled');
   });
+  $('#startup-page-setting').addEventListener('change', event => {
+    settings.startupPage = ['new', 'notes', 'settings'].includes(event.target.value) ? event.target.value : 'new';
+    persistSettings();
+    showToast('startup page updated');
+  });
+  $('#background-hue-setting').addEventListener('input', event => {
+    settings.backgroundHue = Math.max(-120, Math.min(120, Number(event.target.value) || 0));
+    $('#background-hue-value').textContent = `${settings.backgroundHue}°`;
+    applyAppearanceSettings();
+    persistSettings();
+  });
+  $('#white-note-text-setting').addEventListener('change', event => {
+    settings.whiteNoteText = event.target.checked;
+    applyAppearanceSettings();
+    persistSettings();
+  });
+  $('#show-sidebar-notes-setting').addEventListener('change', event => {
+    settings.showSidebarNotes = event.target.checked;
+    applyAppearanceSettings();
+    renderSidebarNotes();
+    persistSettings();
+  });
   $('#delete-all-button').addEventListener('click', deleteAllNotes);
   $('#reset-shortcuts').addEventListener('click', () => {
     settings.shortcuts = { ...DEFAULT_SHORTCUTS };
@@ -589,11 +678,14 @@
   if (currentRoute === 'new') {
     activeNoteId = notes.some(note => note.id === initialId) ? initialId : (notes[0]?.id || null);
     if (!activeNoteId) {
-      const note = { id: makeId(), title: '', content: '', tags: [], createdAt: Date.now(), updatedAt: Date.now() };
-      notes.unshift(note);
-      activeNoteId = note.id;
-      persistNotes();
+      draftNote = makeDraftNote();
+      activeNoteId = draftNote.id;
     }
   }
+  if (!routeFromPath(location.pathname)) {
+    history.replaceState({ route: currentRoute, noteId: currentRoute === 'new' ? activeNoteId : null }, '', routeUrl(currentRoute, currentRoute === 'new' ? activeNoteId : null));
+  }
+  const storedNotes = readStorage(NOTES_KEY, []);
+  if (!Array.isArray(storedNotes) || notes.length !== storedNotes.length) persistNotes();
   renderApp();
 })();

@@ -25,6 +25,7 @@
   <canvas id="wallpaper" aria-hidden="true"></canvas>
   <div class="wallpaper-wash" aria-hidden="true"></div>
   <div class="noise-layer" aria-hidden="true"></div>
+  <div class="readability-filter" aria-hidden="true"></div>
 
   <div class="app-frame" id="app">
     <aside class="sidebar glass-panel" aria-label="Main navigation">
@@ -42,6 +43,10 @@
           <span>settings</span>
         </a>
       </nav>
+      <section class="sidebar-notes-section" id="sidebar-notes-section" aria-label="Your notes">
+        <div class="sidebar-section-heading">notes</div>
+        <div class="sidebar-notes-list" id="sidebar-notes-list"></div>
+      </section>
     </aside>
 
     <main class="main-area">
@@ -111,7 +116,14 @@
               <div class="settings-card-heading"><h2>Note preferences</h2></div>
               <div class="setting-row"><div class="setting-copy"><strong>Use Markdown for tags</strong><span>Find hashtags in your notes and use them as tags.</span></div><label class="switch"><input type="checkbox" id="markdown-tags-setting"><span class="switch-track"></span></label></div>
             </section>
-            <section class="settings-card glass-panel">
+            <section class="settings-card appearance-card glass-panel">
+              <div class="settings-card-heading"><h2>Appearance</h2></div>
+              <div class="setting-row"><div class="setting-copy"><strong>Startup page</strong><span>Choose which page opens first.</span></div><select class="setting-select" id="startup-page-setting" aria-label="Startup page"><option value="new">New note</option><option value="notes">Notes</option><option value="settings">Settings</option></select></div>
+              <div class="setting-row hue-setting-row"><div class="setting-copy"><strong>Background hue</strong><span>Adjust the color of the wallpaper.</span></div><div class="hue-control"><input id="background-hue-setting" type="range" min="-120" max="120" step="1" value="0" aria-label="Background hue"><output id="background-hue-value" for="background-hue-setting">0°</output></div></div>
+              <div class="setting-row"><div class="setting-copy"><strong>White note text</strong><span>Use white text in the editor.</span></div><label class="switch"><input type="checkbox" id="white-note-text-setting"><span class="switch-track"></span></label></div>
+              <div class="setting-row"><div class="setting-copy"><strong>Show notes in sidebar</strong><span>Keep your saved notes under the main navigation.</span></div><label class="switch"><input type="checkbox" id="show-sidebar-notes-setting"><span class="switch-track"></span></label></div>
+            </section>
+            <section class="settings-card glass-panel keyboard-card">
               <div class="settings-card-heading"><h2>Keyboard shortcuts</h2></div>
               <div class="shortcut-list" id="shortcut-list"></div>
               <div class="shortcut-footer"><span id="shortcut-edit-status" aria-live="polite"></span><button class="text-action" id="reset-shortcuts" type="button">reset defaults</button></div>
