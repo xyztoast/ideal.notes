@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Opening Noted…</title>
+</head>
+<body>
+  <script>
+    (() => {
+      const path = location.pathname;
+      const match = path.match(/\/(new|notes|settings)\/?$/);
+      const route = match ? `/${match[1]}` : '/new';
+      const base = match ? path.slice(0, match.index) : path.replace(/\/[^/]*$/, '');
+      location.replace(`${base || ''}/?route=${encodeURIComponent(route)}${location.search}${location.hash}`);
+    })();
+  </script>
+</body>
+</html>
